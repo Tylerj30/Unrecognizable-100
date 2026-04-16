@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "workout-app",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "3900", "--directory", "/Users/tyler/Documents/100 Day Workout/workout-app"],
+      "port": 3900
+    }
+  ]
+}
