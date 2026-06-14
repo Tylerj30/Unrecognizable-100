@@ -1,4 +1,4 @@
-const CACHE = 'unrec100-v1';
+const CACHE = 'unrec100-v2';
 const ASSETS = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
@@ -13,8 +13,18 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
+// Network-first: always try to load the freshest version when online,
+// fall back to cache only when offline. Keeps the app current without
+// needing a cache version bump on every change.
 self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request))
+    fetch(e.request)
+      .then(res => {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+        return res;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
