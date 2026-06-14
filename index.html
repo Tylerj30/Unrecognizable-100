@@ -323,6 +323,17 @@ body{display:flex;flex-direction:column;height:100dvh}
 .pr-val{font-size:16px;font-weight:800;color:var(--red);text-align:right}
 .pr-hist{font-size:10px;color:var(--gray);margin-top:1px;text-align:right}
 
+.backup-card{background:var(--card);border:1px solid var(--card-b);border-radius:var(--r);padding:15px;margin-bottom:22px}
+.backup-desc{font-size:12px;color:var(--gray);line-height:1.45;margin-bottom:13px}
+.backup-btns{display:flex;gap:9px}
+.backup-btn{
+  flex:1;padding:12px;border-radius:11px;cursor:pointer;
+  font-family:inherit;font-size:14px;font-weight:700;
+  border:1px solid var(--card-b);background:var(--glass);color:var(--white);
+  transition:opacity .15s,transform .12s;
+}
+.backup-btn:active{opacity:.8;transform:scale(.98)}
+
 /* ── MISC ── */
 @media(min-width:768px){
   #main{padding:18px 20px 100px}
@@ -765,6 +776,15 @@ function renderDash(){
     <div class="sec-title">Personal Records</div>
     <div class="pr-card">
       ${prRows||'<div class="pr-row"><div class="pr-ex" style="color:var(--gray)">Log workouts to see your PRs</div></div>'}
+    </div>
+    <div class="sec-title">Backup</div>
+    <div class="backup-card">
+      <div class="backup-desc">Save a copy of all your logged weights, reps, and notes — or restore from a backup file. Do this before deleting or reinstalling the app.</div>
+      <div class="backup-btns">
+        <button class="backup-btn" onclick="exportData()">Export backup</button>
+        <button class="backup-btn" onclick="document.getElementById('importFile').click()">Restore</button>
+      </div>
+      <input type="file" id="importFile" accept="application/json,.json" style="display:none" onchange="importData(this)">
     </div>`;
 }
 
@@ -894,6 +914,40 @@ function toggleTheme(){
   const next=document.body.classList.contains('light')?'dark':'light';
   localStorage.setItem('unrec100_theme',next);
   applyTheme(next);
+}
+
+function exportData(){
+  const payload={app:'unrecognizable100',version:1,exportedAt:new Date().toISOString(),logs:logs};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const stamp=new Date().toISOString().slice(0,10);
+  a.href=url;a.download=`unrecognizable100-backup-${stamp}.json`;
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function importData(input){
+  const file=input.files&&input.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const data=JSON.parse(reader.result);
+      const incoming=data&&data.logs?data.logs:data;
+      if(!incoming||typeof incoming!=='object')throw new Error('bad format');
+      const dayCount=Object.keys(incoming).filter(k=>/^\d+$/.test(k)).length;
+      if(!confirm(`Restore backup? This replaces your current data with ${dayCount} logged day(s).`)){input.value='';return;}
+      logs=incoming;save();
+      alert('Backup restored.');
+      render();
+    }catch(e){
+      alert('Could not read that file — make sure it is an Unrecognizable 100 backup.');
+    }
+    input.value='';
+  };
+  reader.readAsText(file);
 }
 
 document.getElementById('btnPrev').addEventListener('click',()=>{if(cur>1){cur--;render();}});
